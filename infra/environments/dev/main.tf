@@ -23,3 +23,12 @@ module "ecr" {
   project_name = "production-pipeline"
   environment  = "dev"
 }
+
+module "alb" {
+  source = "../../modules/alb"
+
+  project_name      = "production-pipeline"
+  environment       = "dev"
+  vpc_id            = module.network.vpc_id
+  public_subnet_ids = module.network.public_subnet_ids
+}
