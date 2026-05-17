@@ -32,3 +32,17 @@ module "alb" {
   vpc_id            = module.network.vpc_id
   public_subnet_ids = module.network.public_subnet_ids
 }
+
+
+module "ecs" {
+  source = "../../modules/ecs"
+
+  project_name          = "production-pipeline"
+  environment           = "dev"
+  vpc_id                = module.network.vpc_id
+  public_subnet_ids     = module.network.public_subnet_ids
+  alb_security_group_id = module.alb.alb_security_group_id
+  target_group_arn      = module.alb.target_group_arn
+
+  container_image = "${module.ecr.repository_url}:latest"
+}
