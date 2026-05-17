@@ -16,3 +16,10 @@ module "network" {
     "eu-west-2b"
   ]
 }
+
+module "ecr" {
+  source = "../../modules/ecr"
+
+  project_name = "production-pipeline"
+  environment  = "dev"
+}
