@@ -267,7 +267,7 @@ A lot of beginner CI/CD projects stop at:
 
 ```text
 push code
-↓
+    ↓
 deploy app
 ```
 
