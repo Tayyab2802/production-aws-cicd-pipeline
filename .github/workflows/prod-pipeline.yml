@@ -1,0 +1,138 @@
+name: Prod Pipeline
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "app/**"
+      - "infra/**"
+      - ".github/workflows/prod-pipeline.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate and Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Format Check
+        working-directory: infra/environments/prod
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Init Without Backend
+        working-directory: infra/environments/prod
+        run: terraform init -backend=false
+
+      - name: Terraform Validate
+        working-directory: infra/environments/prod
+        run: terraform validate
+
+      - name: Run tfsec IaC Scan
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          working_directory: infra
+
+      - name: Run Checkov IaC Scan
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: infra
+          framework: terraform
+          skip_check: CKV2_AWS_20
+
+      - name: Build Docker Image
+        run: docker build -t production-pipeline-app:${{ github.sha }} ./app
+
+      - name: Run Trivy Image Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: production-pipeline-app:${{ github.sha }}
+          format: table
+          exit-code: 1
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+
+      - name: Save Docker Image
+        run: docker save production-pipeline-app:${{ github.sha }} -o app-image.tar
+
+      - name: Upload Docker Image Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: prod-app-image
+          path: app-image.tar
+          retention-days: 1
+
+  deploy-prod:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    environment: production
+    needs: validate
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Docker Image Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: prod-app-image
+
+      - name: Load Docker Image
+        run: docker load -i app-image.tar
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-2
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        working-directory: infra/environments/prod
+        run: terraform init
+
+      - name: Create Production ECR Repository
+        working-directory: infra/environments/prod
+        run: |
+          terraform apply -auto-approve \
+            -target=module.ecr \
+            -var="container_image=placeholder"
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Tag and Push Docker Image
+        env:
+          ECR_REPOSITORY: 536376965240.dkr.ecr.eu-west-2.amazonaws.com/production-pipeline-prod-app
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker tag production-pipeline-app:$IMAGE_TAG $ECR_REPOSITORY:$IMAGE_TAG
+
+          if aws ecr describe-images \
+            --repository-name production-pipeline-prod-app \
+            --image-ids imageTag=$IMAGE_TAG \
+            --region eu-west-2 > /dev/null 2>&1; then
+            echo "Image tag $IMAGE_TAG already exists in ECR. Skipping push."
+          else
+            docker push $ECR_REPOSITORY:$IMAGE_TAG
+          fi
+
+      - name: Terraform Apply Production
+        working-directory: infra/environments/prod
+        env:
+          ECR_REPOSITORY: 536376965240.dkr.ecr.eu-west-2.amazonaws.com/production-pipeline-prod-app
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          terraform apply -auto-approve \
+            -var="container_image=$ECR_REPOSITORY:$IMAGE_TAG"

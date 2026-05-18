@@ -1,0 +1,131 @@
+name: Dev Pipeline
+
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - "app/**"
+      - "infra/**"
+      - ".github/workflows/dev-pipeline.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate and Scan
+    runs-on: ubuntu-latest
+    environment: dev
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-2
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Format Check
+        working-directory: infra/environments/dev
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Init
+        working-directory: infra/environments/dev
+        run: terraform init
+
+      - name: Terraform Validate
+        working-directory: infra/environments/dev
+        run: terraform validate
+
+      - name: Run tfsec IaC Scan
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          working_directory: infra
+
+      - name: Run Checkov IaC Scan
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: infra
+          framework: terraform
+          skip_check: CKV2_AWS_20
+
+      - name: Build Docker Image
+        run: docker build -t production-pipeline-app:${{ github.sha }} ./app
+
+      - name: Run Trivy Image Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: production-pipeline-app:${{ github.sha }}
+          format: table
+          exit-code: 1
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+
+      - name: Save Docker Image
+        run: docker save production-pipeline-app:${{ github.sha }} -o app-image.tar
+
+      - name: Upload Docker Image Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-image
+          path: app-image.tar
+          retention-days: 1
+
+  deploy-dev:
+    name: Deploy to Dev
+    runs-on: ubuntu-latest
+    environment: dev
+    needs: validate
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Docker Image Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-image
+
+      - name: Load Docker Image
+        run: docker load -i app-image.tar
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-2
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Tag and Push Docker Image
+        env:
+          ECR_REPOSITORY: 536376965240.dkr.ecr.eu-west-2.amazonaws.com/production-pipeline-dev-app
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker tag production-pipeline-app:$IMAGE_TAG $ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REPOSITORY:$IMAGE_TAG
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        working-directory: infra/environments/dev
+        run: terraform init
+
+      - name: Terraform Apply
+        working-directory: infra/environments/dev
+        env:
+          ECR_REPOSITORY: 536376965240.dkr.ecr.eu-west-2.amazonaws.com/production-pipeline-dev-app
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          terraform apply -auto-approve \
+            -var="container_image=$ECR_REPOSITORY:$IMAGE_TAG"
