@@ -265,10 +265,11 @@ Potential future enhancements include:
 
 A lot of beginner CI/CD projects stop at:
 
-
+```text
 push code
 ↓
 deploy app
+```
 
 This project intentionally went further by introducing:
 
