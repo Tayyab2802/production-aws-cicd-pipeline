@@ -1,3 +1,5 @@
+#checkov:skip=CKV_AWS_260:Public HTTP access is allowed in dev for external ALB testing; production will enforce HTTPS and restricted ingress.
+#checkov:skip=CKV_AWS_382:Broad outbound access is temporarily allowed in dev to simplify connectivity.
 resource "aws_security_group" "alb" {
   name        = "${var.project_name}-${var.environment}-alb-sg"
   description = "Allow HTTP traffic to ALB"
@@ -26,6 +28,9 @@ resource "aws_security_group" "alb" {
   }
 }
 
+#checkov:skip=CKV_AWS_2:HTTPS is deferred in dev to avoid ACM and domain configuration during early environment testing.
+#checkov:skip=CKV_AWS_91:ALB access logging is deferred in dev to avoid additional S3 logging infrastructure.
+#checkov:skip=CKV_AWS_150:Deletion protection is disabled in dev to allow repeated destroy and rebuild testing.
 resource "aws_lb" "app" {
   name                       = "${var.project_name}-${var.environment}-alb"
   internal                   = false
