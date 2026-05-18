@@ -1,5 +1,6 @@
-#checkov:skip=CKV_AWS_382:Broad outbound access is temporarily allowed in dev for ECS image pulls and CloudWatch logging.
 resource "aws_security_group" "ecs" {
+  #checkov:skip=CKV_AWS_382:Broad outbound access is temporarily allowed in dev for ECS image pulls and CloudWatch logging.
+
   name        = "${var.project_name}-${var.environment}-ecs-sg"
   description = "Allow traffic from ALB to ECS tasks"
   vpc_id      = var.vpc_id
@@ -42,8 +43,9 @@ resource "aws_ecs_cluster" "main" {
   }
 }
 
-#checkov:skip=CKV_AWS_158:KMS encryption is deferred in dev and will be implemented in production logging architecture.
 resource "aws_cloudwatch_log_group" "ecs" {
+  #checkov:skip=CKV_AWS_158:KMS encryption is deferred in dev and will be implemented in production logging architecture.
+
   name              = "/ecs/${var.project_name}-${var.environment}"
   retention_in_days = 365
 
@@ -123,8 +125,9 @@ resource "aws_ecs_task_definition" "app" {
   }
 }
 
-#checkov:skip=CKV_AWS_333:Public IP assignment is used in dev for simplified Fargate deployment and testing.
 resource "aws_ecs_service" "app" {
+  #checkov:skip=CKV_AWS_333:Public IP assignment is used in dev for simplified Fargate deployment and testing.
+
   name            = "${var.project_name}-${var.environment}-service"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.app.arn

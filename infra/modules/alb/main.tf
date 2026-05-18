@@ -74,6 +74,10 @@ resource "aws_lb_target_group" "app" {
 }
 
 resource "aws_lb_listener" "http" {
+  #checkov:skip=CKV_AWS_2:Dev ALB uses HTTP to avoid ACM and domain setup; production will use HTTPS.
+  #checkov:skip=CKV_AWS_378:Dev ALB listener uses HTTP for simple external testing; production will use HTTPS.
+  #checkov:skip=CKV2_AWS_20:HTTP to HTTPS redirect is deferred in dev because HTTPS is not configured until production.
+
   load_balancer_arn = aws_lb.app.arn
   port              = 80
   protocol          = "HTTP"
