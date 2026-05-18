@@ -188,6 +188,7 @@ This models a realistic deployment promotion strategy.
 
 
 # Repository Structure
+```text
 
 ├── app/
 │   ├── main.py
@@ -211,6 +212,7 @@ This models a realistic deployment promotion strategy.
         ├── dev-pipeline.yml
         └── prod-pipeline.yml
 
+```
 
 # Key Lessons Learnt
 
