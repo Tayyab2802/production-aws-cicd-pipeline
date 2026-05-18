@@ -12,6 +12,7 @@ jobs:
   validate:
     name: Validate and Scan
     runs-on: ubuntu-latest
+    environment: dev
 
     steps:
       - name: Checkout repository
