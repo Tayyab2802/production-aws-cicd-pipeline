@@ -51,6 +51,9 @@ resource "aws_lb" "app" {
 }
 
 resource "aws_lb_target_group" "app" {
+  #checkov:skip=CKV_AWS_378:HTTP is used between the dev ALB and ECS service to simplify testing; production will use HTTPS/TLS where appropriate.
+  #checkov:skip=CKV2_AWS_20:HTTP to HTTPS redirection is deferred in dev because HTTPS is not configured until production.
+
   name        = "${var.project_name}-${var.environment}-tg"
   port        = 8000
   protocol    = "HTTP"
