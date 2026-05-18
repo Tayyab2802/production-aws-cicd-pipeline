@@ -33,6 +33,7 @@ resource "aws_lb" "app" {
   #checkov:skip=CKV_AWS_2:HTTPS is deferred in dev to avoid ACM and domain configuration during early environment testing.
   #checkov:skip=CKV_AWS_91:ALB access logging is deferred in dev to avoid additional S3 logging infrastructure.
   #checkov:skip=CKV_AWS_150:Deletion protection is disabled in dev to allow repeated destroy and rebuild testing.
+  #checkov:skip=CKV2_AWS_28:WAF is deferred in dev to keep the environment lightweight; production will attach AWS WAF to the public ALB.
 
   name                       = "${var.project_name}-${var.environment}-alb"
   internal                   = false
@@ -75,6 +76,7 @@ resource "aws_lb_target_group" "app" {
 
 resource "aws_lb_listener" "http" {
   #checkov:skip=CKV_AWS_2:Dev ALB uses HTTP to avoid ACM and domain setup; production will use HTTPS.
+  #checkov:skip=CKV_AWS_103:TLS policy is not configured in dev because this listener uses HTTP; production HTTPS listener will enforce TLS 1.2 or higher.
   #checkov:skip=CKV_AWS_378:Dev ALB listener uses HTTP for simple external testing; production will use HTTPS.
   #checkov:skip=CKV2_AWS_20:HTTP to HTTPS redirect is deferred in dev because HTTPS is not configured until production.
 
