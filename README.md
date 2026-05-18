@@ -154,7 +154,7 @@ This separation prevents environment conflicts and accidental cross-environment 
 Docker images are tagged using the Git commit SHA.
 
 Example:
-536376965240.dkr.ecr.eu-west-2.amazonaws.com/production-pipeline-dev-app:<commit-sha>
+{aws-account}.dkr.ecr.{aws-region}.amazonaws.com/production-pipeline-dev-app:<commit-sha>
 
 
 Amazon ECR image tag mutability is disabled.
