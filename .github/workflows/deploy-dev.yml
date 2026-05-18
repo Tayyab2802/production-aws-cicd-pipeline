@@ -1,7 +1,11 @@
 name: Deploy Dev
 
 on:
-  push:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
     branches:
       - dev
 
@@ -13,6 +17,7 @@ jobs:
     name: Deploy to Dev
     runs-on: ubuntu-latest
     environment: dev
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Checkout repository
@@ -31,7 +36,7 @@ jobs:
       - name: Build and Push Docker Image
         env:
           ECR_REPOSITORY: 536376965240.dkr.ecr.eu-west-2.amazonaws.com/production-pipeline-dev-app
-          IMAGE_TAG: ${{ github.sha }}
+          IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
         run: |
           docker build -t $ECR_REPOSITORY:$IMAGE_TAG ./app
           docker push $ECR_REPOSITORY:$IMAGE_TAG
@@ -47,7 +52,7 @@ jobs:
         working-directory: infra/environments/dev
         env:
           ECR_REPOSITORY: 536376965240.dkr.ecr.eu-west-2.amazonaws.com/production-pipeline-dev-app
-          IMAGE_TAG: ${{ github.sha }}
+          IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
         run: |
           terraform apply -auto-approve \
             -var="container_image=$ECR_REPOSITORY:$IMAGE_TAG"
