@@ -6,7 +6,7 @@ app = FastAPI(title="Production AWS CI/CD Demo")
 @app.get("/")
 def root():
     return {
-        "message": "Production-ready AWS CI/CD pipeline demo",
+        "message": "Production-ready AWS CI/CD pipeline demo!!!",
         "status": "running"
     }
 
