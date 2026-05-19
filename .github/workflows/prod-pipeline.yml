@@ -102,13 +102,6 @@ jobs:
         working-directory: infra/environments/prod
         run: terraform init
 
-      - name: Create Production ECR Repository
-        working-directory: infra/environments/prod
-        run: |
-          terraform apply -auto-approve \
-            -target=module.ecr \
-            -var="container_image=placeholder"
-
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
