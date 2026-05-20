@@ -40,7 +40,6 @@ The platform is deployed on AWS using Terraform and consists of:
 * Application Load Balancer (ALB)
 * Amazon ECS Fargate
 * Amazon ECR
-* CloudWatch logging
 * Terraform remote state in Amazon S3
 * DynamoDB state locking
 * GitHub Actions CI/CD pipelines
