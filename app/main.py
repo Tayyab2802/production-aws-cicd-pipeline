@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI
 
 app = FastAPI(title="Production AWS CI/CD Demo")
@@ -23,5 +25,5 @@ def version():
     return {
         "app": "aws-cicd-demo",
         "version": "1.0.0",
-        "environment": "dev"
+        "environment": os.getenv("ENVIRONMENT", "unknown")
     }
