@@ -92,38 +92,45 @@ resource "aws_ecs_task_definition" "app" {
   memory                   = "512"
   execution_role_arn       = aws_iam_role.ecs_task_execution.arn
 
-container_definitions = jsonencode([
-  {
-    name                   = "app"
-    image                  = var.container_image
-    essential              = true
-    readonlyRootFilesystem = true
+  container_definitions = jsonencode([
+    {
+      name                   = "app"
+      image                  = var.container_image
+      essential              = true
+      readonlyRootFilesystem = true
 
-    environment = [
-      {
-        name  = "ENVIRONMENT"
-        value = var.environment
-      }
-    ]
+      environment = [
+        {
+          name  = "ENVIRONMENT"
+          value = var.environment
+        }
+      ]
 
-    portMappings = [
-      {
-        containerPort = 8000
-        hostPort      = 8000
-        protocol      = "tcp"
-      }
-    ]
+      portMappings = [
+        {
+          containerPort = 8000
+          hostPort      = 8000
+          protocol      = "tcp"
+        }
+      ]
 
-    logConfiguration = {
-      logDriver = "awslogs"
-      options = {
-        awslogs-group         = aws_cloudwatch_log_group.ecs.name
-        awslogs-region        = "eu-west-2"
-        awslogs-stream-prefix = "ecs"
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = aws_cloudwatch_log_group.ecs.name
+          awslogs-region        = "eu-west-2"
+          awslogs-stream-prefix = "ecs"
+        }
       }
     }
+  ])
+
+  tags = {
+    Name        = "${var.project_name}-${var.environment}-task"
+    Project     = var.project_name
+    Environment = var.environment
   }
-])
+}
 
 resource "aws_ecs_service" "app" {
   #checkov:skip=CKV_AWS_333:Public IP assignment is used in dev for simplified Fargate deployment and testing.
